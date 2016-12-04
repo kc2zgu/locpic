@@ -142,7 +142,14 @@ sub lookup {
                     #print "ret $out[$#out]\n";
                 }
             }
-            return \@out;
+            if (wantarray)
+            {
+                return ($s1, $s2, \@out);
+            }
+            else
+            {
+                return \@out;
+            }
         }
     }
 }

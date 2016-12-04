@@ -110,5 +110,19 @@ sub find_point {
     return undef;
 }
 
+sub find_points {
+    my ($self, $time) = @_;
+
+    return $self->{points}->[0]
+      if $time < $self->{start_time};
+    return $self->{points}->[$#{$self->{points}}]
+      if $time > $self->{end_time};
+
+    if ($self->{ts})
+    {
+        my @p = $self->{ts}->lookup($time);
+        return map {LocPic::Point->new(time => $_->[0], lat => $_->[1], lon => $_->[2], ele => $_->[3])} @p;
+    }
+}
 
 1;
