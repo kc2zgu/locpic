@@ -91,21 +91,29 @@ sub find_point {
 
     if ($self->{ts})
     {
-        my $p = $self->{ts}->lookup($time);
+        my ($p, $s1, $s2) = $self->{ts}->lookup($time);
         if (defined $p)
         {
+            if (defined $s1 && defined $s2)
+            {
+                my $timediff1 = $time->epoch - $s1->[0]->epoch;
+                my $timediff2 = $s2->[0]->epoch - $time->epoch;
+                #print "TS timediff: $timediff1 $timediff2\n";
+            }
             return LocPic::Point->new(time => $time, lat => $p->[1], lon => $p->[2], ele => $p->[3]);
         }
     }
-
-    my $i = 0;
-    while (exists $self->{points}->[$i])
+    else
     {
-        if ($self->{points}->[$i]->{time} > $time)
+        my $i = 0;
+        while (exists $self->{points}->[$i])
         {
-            return @{$self->{points}}[$i-1, $i];
+            if ($self->{points}->[$i]->{time} > $time)
+            {
+                return @{$self->{points}}[$i-1, $i];
+            }
+            $i++;
         }
-        $i++;
     }
     return undef;
 }

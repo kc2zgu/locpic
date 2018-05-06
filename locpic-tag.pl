@@ -13,17 +13,53 @@ use Getopt::Std;
 
 my %opts;
 
-getopts('i:c:d:g:o:nf', \%opts);
+getopts('i:c:d:g:o:t:nfh', \%opts);
+
+sub usage {
+    print "Usage: $0 options\n\n";
+
+    print "  -i file|directory    input image(s)\n";
+    print "  -c camera            restrict to camera\n";
+    print "  -d trackdb           track database path\n";
+    print "  -g gpxfile           single GPX track\n";
+    print "  -o offset            time offset\n";
+    print "  -t seconds           maximum interpolation interval\n";
+    print "  -n                   dry run (no file updates)\n";
+    print "  -f                   force updates\n";
+}
+
+if (exists $opts{h})
+{
+    usage;
+    exit 0;
+}
 
 my ($trackdb, $lasttrack, $track, $offsetdt);
+
+my %stats;
+sub add_stat {
+    my $stat_type = shift;
+    if (exists $stats{$stat_type})
+    {
+        $stats{$stat_type}++;
+    }
+    else
+    {
+        $stats{$stat_type} = 1
+    }
+    #print "$stat_type count: $stats{$stat_type}\n";
+}
 
 sub align_image {
     my $image = LocPic::Image->new($_[0]);
     unless (defined $image)
     {
         print "not an image: $_[0]\n";
+        add_stat('noimage');
         return;
     }
+
+    add_stat('total');
 
     my $itime;
     eval
@@ -33,6 +69,7 @@ sub align_image {
     if ($@)
     {
         print "[$_[0]: internal error]\n";
+        add_stat('error');
         return;
     }
     my $gpstime = $itime + $offsetdt;
@@ -43,6 +80,7 @@ sub align_image {
     {
         printf "%-16s (%-24.24s): %s (camera skipped)\n",
           basename($_[0]), $camera, $itime;
+        add_stat('camskip');
         return;
     }
 
@@ -56,6 +94,7 @@ sub align_image {
         {
             printf "%-16s (%-24.24s): %s NO TRACK\n",
               basename($_[0]), $camera, $itime;
+            add_stat('notrack');
             return;
         }
         if ($trackfile ne $lasttrack)
@@ -77,7 +116,7 @@ sub align_image {
 
         #print "nearest points: $time1 $lat1 $lon1, $time2 $lat2, $lon2\n";
         my $intv = ($time2 - $time1)->seconds;
-        #print "interval: $intv\n";
+        print "interval: $intv\n";
         my $ipos = ($gpstime - $time1)->seconds / $intv;
         #print "interpolate: $ipos\n";
         $lat1 = ($lat2 - $lat1) * $ipos + $lat1;
@@ -85,7 +124,7 @@ sub align_image {
     }
     else
     {
-        #print "nearest point: $time1 $lat1 $lon1\n";
+        print "nearest point: $time1 $lat1 $lon1\n";
         #return;
     }
 
@@ -96,6 +135,7 @@ sub align_image {
     {
         #print "existing location: $point->{lat} $point->{lon}\n";
         print " [skip]\n";
+        add_stat('skip');
     }
     else
     {
@@ -103,6 +143,7 @@ sub align_image {
         {
             $image->set_location(LocPic::Point->new(lat => $lat1, lon => $lon1));
             print " [W]";
+            add_stat('tag');
         }
         print "\n";
     }
@@ -130,6 +171,10 @@ if (exists $opts{g})
 else
 {
     $trackdb = LocPic::TrackDB->new;
+    if (exists $opts{t})
+    {
+        $trackdb->{maxdiff} = $opts{t};
+    }
 }
 
 if (-d $opts{i})
@@ -138,8 +183,21 @@ if (-d $opts{i})
     while (my $file = readdir $dir)
     {
         my $path = "$opts{i}/$file";
-        align_image($path) if -f $path;
+        eval {
+            align_image($path) if -f $path;
+        };
+        if ($@)
+        {
+            print "$file: Error: $@\n";
+            add_stat('error');
+        }
     }
+
+    print "Images found:      $stats{total}\n";
+    print "Non-image files:   $stats{noimage}\n" if $stats{noimage};
+    print "Tag written:       $stats{tag}\n" if $stats{tag};
+    print "Already tagged:    $stats{skip}\n" if $stats{skip};
+    print "Camera skipped:    $stats{camskip}\n" if $stats{camskip};
 }
 else
 {

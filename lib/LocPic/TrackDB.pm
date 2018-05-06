@@ -4,6 +4,7 @@ use strict;
 use DBI;
 use LocPic::Database;
 use DateTime;
+use File::Basename;
 
 sub new {
     my ($class, $dbfile) = @_;
@@ -13,7 +14,7 @@ sub new {
     $dbh->do('CREATE INDEX IF NOT EXISTS start_index ON tracks ( start )');
     $dbh->do('CREATE INDEX IF NOT EXISTS end_index ON tracks ( end )');
 
-    my $self = {dbh => $dbh};
+    my $self = {dbh => $dbh, maxdiff => 7200};
     bless $self, $class;
 }
 
@@ -59,7 +60,7 @@ sub find_time {
         {
             if (@tracks > 1)
             {
-                print "multiple tracks\n";
+                print "multiple tracks: " . join(', ', map {basename $_->[0]} @tracks) . "\n";
             }
             return $tracks[0]->[0];
         }
@@ -73,25 +74,50 @@ sub find_time {
             if ($stmt->execute($time))
             {
                 ($t1, $st, $et) = $stmt->fetchrow_array;
-                #print "last before track: $t1 ($st-$et)\n";
-                $td1 = $etime - DateTime::Format::ISO8601->parse_datetime($et)->epoch;
+                if (defined $t1)
+                {
+                    print "last before track: $t1 ($st-$et)\n";
+                    $td1 = $etime - DateTime::Format::ISO8601->parse_datetime($et)->epoch;
+                }
+                else
+                {
+                    print "no tracks before time\n";
+                }
                 #print "diff $td1 s\n";
             }
             $stmt = $self->{dbh}->prepare('SELECT file, start, end FROM tracks WHERE start >= ? ORDER BY start ASC LIMIT 1');
             if ($stmt->execute($time))
             {
                 ($t2, $st, $et) = $stmt->fetchrow_array;
-                #print "first after track: $t2 ($st-$et)\n";
-                $td2 = DateTime::Format::ISO8601->parse_datetime($st)->epoch - $etime;
+                if (defined $t2)
+                {
+                    print "first after track: $t2 ($st-$et)\n";
+                    $td2 = DateTime::Format::ISO8601->parse_datetime($st)->epoch - $etime;
+                }
+                else
+                {
+                    print "no tracks after time\n";
+                }
                 #print "diff $td2 s\n";
             }
-            my $maxdiff = 7200;
-            if ($td1 > $maxdiff && $td2 > $maxdiff)
+            my $rt;
+            if (defined $t1 && !defined $t2)
             {
-                print "no track for $time\n";
+                $rt = $t1;
+            }
+            elsif (!defined $t1 && defined $t2)
+            {
+                $rt = $t2;
+            }
+            elsif ($td1 > $self->{maxdiff} && $td2 > $self->{maxdiff})
+            {
+                print "no track for $time (diff: $td1, $td2)\n";
                 return undef;
             }
-            my $rt = ($td1 < $td2) ? $t1 : $t2;
+            else
+            {
+                $rt = ($td1 < $td2) ? $t1 : $t2;
+            }
             print "closest track: $rt ($td1/$td2)\n";
             return $rt;
         }

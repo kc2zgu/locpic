@@ -132,7 +132,7 @@ sub lookup {
                         my $d1 = $s2->[0]->epoch - $s1->[0]->epoch;
                         my $d2 = $key->epoch - $s1->[0]->epoch;
                         $pos = $d2 / $d1;
-                        #print "$axis s1: $s1->[0] s2: $s2->[0] key: $key d1: $d1 d2: $d2 p: $pos\n";
+                        print "$axis s1: $s1->[0] s2: $s2->[0] key: $key d1: $d1 d2: $d2 p: $pos\n";
                     } else
                     {
                         $pos = ($key - $s1->[0]) / ($s2->[0] - $s1->[0]);
@@ -144,10 +144,12 @@ sub lookup {
             }
             if (wantarray)
             {
-                return ($s1, $s2, \@out);
+                print "TS: array return\n";
+                return (\@out, $s1, $s2);
             }
             else
             {
+                print "TS: scalar return\n";
                 return \@out;
             }
         }
