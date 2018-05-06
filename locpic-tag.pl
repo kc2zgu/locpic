@@ -8,12 +8,13 @@ use lib "$FindBin::Bin/lib";
 use LocPic::Track;
 use LocPic::TrackDB;
 use LocPic::Image;
+use LocPic::Debug;
 use File::Basename;
 use Getopt::Std;
 
 my %opts;
 
-getopts('i:c:d:g:o:t:nfh', \%opts);
+getopts('i:c:d:g:o:t:l:nfh', \%opts);
 
 sub usage {
     print "Usage: $0 options\n\n";
@@ -24,6 +25,7 @@ sub usage {
     print "  -g gpxfile           single GPX track\n";
     print "  -o offset            time offset\n";
     print "  -t seconds           maximum interpolation interval\n";
+    print "  -l level             debug message level\n";
     print "  -n                   dry run (no file updates)\n";
     print "  -f                   force updates\n";
 }
@@ -32,6 +34,11 @@ if (exists $opts{h})
 {
     usage;
     exit 0;
+}
+
+if (exists $opts{l})
+{
+    LocPic::Debug->set_level($opts{l});
 }
 
 my ($trackdb, $lasttrack, $track, $offsetdt);
@@ -124,7 +131,7 @@ sub align_image {
     }
     else
     {
-        print "nearest point: $time1 $lat1 $lon1\n";
+        LocPic::Debug->_debug(1 => "nearest point: $time1 $lat1 $lon1");
         #return;
     }
 

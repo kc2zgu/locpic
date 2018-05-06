@@ -8,7 +8,7 @@ use LocPic::Point;
 use File::Spec;
 use Time::Series;
 
-use base qw/Class::Accessor::Fast/;
+use base qw/Class::Accessor::Fast LocPic::Debug/;
 
 LocPic::Track->mk_accessors(qw/start_time end_time file_name/);
 
@@ -98,7 +98,7 @@ sub find_point {
             {
                 my $timediff1 = $time->epoch - $s1->[0]->epoch;
                 my $timediff2 = $s2->[0]->epoch - $time->epoch;
-                #print "TS timediff: $timediff1 $timediff2\n";
+                $self->_debug(1 => "TS timediff: $timediff1 $timediff2");
             }
             return LocPic::Point->new(time => $time, lat => $p->[1], lon => $p->[2], ele => $p->[3]);
         }
