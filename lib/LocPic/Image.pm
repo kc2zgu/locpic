@@ -5,11 +5,14 @@ use strict;
 use Image::ExifTool;
 use Image::ExifTool::Location;
 use DateTime;
+use File::Basename;
+
+use base qw/LocPic::Debug/;
 
 sub new {
     my ($class, $file) = @_;
 
-    my $self = { file => $file, exif => Image::ExifTool->new() };
+    my $self = { file => $file, filebase => basename($file), exif => Image::ExifTool->new(), metadirty => 0 };
     $self->{exif}->ExtractInfo($file, {Group0 => ['EXIF', 'XMP', 'File']});
     my $type = $self->{exif}->GetValue('MIMEType');
 
@@ -21,6 +24,15 @@ sub new {
     else
     {
         return undef;
+    }
+}
+
+sub DESTROY {
+    my $self = shift;
+
+    if ($self->{metadirty})
+    {
+        warn "Image $self->{filebase}: object destroyed with unsaved metadata\n";
     }
 }
 
@@ -93,8 +105,38 @@ sub set_location {
     $self->{exif}->SetLocation($point->lat, $point->lon);
     $self->{exif}->SetElevation($point->ele) if defined $point->ele;
 
-    $self->{exif}->WriteInfo($self->{file});
+    $self->{metadirty} = 1;
 }
 
+
+sub write_meta {
+    my ($self, $backup) = @_;
+
+    if (defined $backup)
+    {
+        my $bakfile = "$self->{file}.bak";
+        $self->_debug(1 => "Writing metadata, original saved to $bakfile");
+        rename $self->{file}, $bakfile;
+        if ($self->{exif}->WriteInfo($bakfile, $self->{file}) == 1)
+        {
+            $self->{metadirty} = 0;
+        }
+        else
+        {
+            warn "Error saving metadata for $self->{filebase}";
+        }
+    } else
+    {
+        $self->_debug(1 => "Writing metadata to $self->{file}");
+        if ($self->{exif}->WriteInfo($self->{file}) == 1)
+        {
+            $self->{metadirty} = 0;
+        }
+        else
+        {
+            warn "Error saving metadata for $self->{filebase}";
+        }
+    }
+}
 
 1;

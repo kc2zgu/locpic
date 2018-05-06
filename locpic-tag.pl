@@ -14,7 +14,7 @@ use Getopt::Std;
 
 my %opts;
 
-getopts('i:c:d:g:o:t:l:nfh', \%opts);
+getopts('i:c:d:g:o:t:l:nfbh', \%opts);
 
 sub usage {
     print "Usage: $0 options\n\n";
@@ -28,6 +28,7 @@ sub usage {
     print "  -l level             debug message level\n";
     print "  -n                   dry run (no file updates)\n";
     print "  -f                   force updates\n";
+    print "  -b                   save backup copies of images\n";
 }
 
 if (exists $opts{h})
@@ -150,6 +151,7 @@ sub align_image {
         {
             $image->set_location(LocPic::Point->new(lat => $lat1, lon => $lon1));
             print " [W]";
+            $image->write_meta($opts{b});
             add_stat('tag');
         }
         print "\n";
