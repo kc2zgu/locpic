@@ -14,7 +14,7 @@ use File::Basename;
 use Statistics::Descriptive;
 
 my %opts;
-getopts('z:m:t:o:', \%opts);
+getopts('z:m:t:o:c:', \%opts);
 
 my ($input) = @ARGV;
 
@@ -64,9 +64,18 @@ sub align_vmin {
     my ($lasttrack, $track);
     my $gisd = GIS::Distance->new();
     my @offsetstats;
-    for my $imagefile(@images)
+    for my $imagefile(sort @images)
     {
         my $image = LocPic::Image->new($imagefile);
+        next unless defined $image;
+        my $camera = $image->get_camera();
+
+        if ($opts{c} && $camera !~ /$opts{c}/)
+        {
+            print "$imagefile: camera $camera skipped\n";
+            next;
+        }
+
         my $itime;
         eval
         {
