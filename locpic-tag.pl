@@ -150,6 +150,7 @@ sub align_image {
         unless (exists $opts{n})
         {
             $image->set_location(LocPic::Point->new(lat => $lat1, lon => $lon1));
+            $image->set_tag_hints(Track => basename($lasttrack), Offset => $opts{o}, GPSTime => $gpstime);
             print " [W]";
             $image->write_meta($opts{b});
             add_stat('tag');

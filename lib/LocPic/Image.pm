@@ -9,6 +9,22 @@ use File::Basename;
 
 use base qw/LocPic::Debug/;
 
+%Image::ExifTool::UserDefined::locpic =
+  ( GROUPS => {0 => 'XMP', 1 => 'XMP-locpic', 2 => 'Image'},
+    NAMESPACE => {locpic => 'http://xmlns.atomicradi.us/locpic'},
+    WRITABLE => 'string',
+    Track => {},
+    Offset => {},
+    GPSTime => {}
+  );
+
+%Image::ExifTool::UserDefined =
+  ( 'Image::ExifTool::XMP::Main' => {
+                                     locpic => {SubDirectory => {TagTable => 'Image::ExifTool::UserDefined::locpic'}}
+                                    },
+    
+  );
+
 sub new {
     my ($class, $file) = @_;
 
@@ -108,6 +124,17 @@ sub set_location {
     $self->{metadirty} = 1;
 }
 
+sub set_tag_hints {
+    my $self = shift;
+
+    while (my $key = shift)
+    {
+        my $value = shift;
+
+        $self->_debug(1 => "Tag data value: $key=$value");
+        $self->{exif}->SetNewValue("XMP-locpic:$key" => $value);
+    }
+}
 
 sub write_meta {
     my ($self, $backup) = @_;

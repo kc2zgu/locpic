@@ -146,12 +146,12 @@ sub lookup {
             }
             if (wantarray)
             {
-                print "TS: array return\n";
+                #print "TS: array return\n";
                 return (\@out, $s1, $s2);
             }
             else
             {
-                print "TS: scalar return\n";
+                #print "TS: scalar return\n";
                 return \@out;
             }
         }
