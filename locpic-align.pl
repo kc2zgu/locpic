@@ -23,12 +23,13 @@ sub align_direct {
       unless -f $input;
     my $image = LocPic::Image->new($input);
 
-    my $itime = $image->get_time();
+    my ($itime, $izone) = $image->get_time();
     my $iday = DateTime->new(year => $itime->year, month => $itime->month, day => $itime->day);
     my $camera = $image->get_camera();
 
     print "camera: $camera\n";
     print "image time: $itime\n";
+    print "camera zone offset: $izone\n" if defined $izone;
     print "image date: $iday\n";
 
     my ($hour, $min, $sec) =
@@ -42,6 +43,16 @@ sub align_direct {
     my $offset = $gpsdt - $itime;
     my $offset_s = $offset->hours * 3600 + $offset->minutes * 60 + $offset->seconds;
     print "offset: $offset_s\n";
+    
+    if (defined $izone)
+    {
+        my $itime_utc = $itime - DateTime::Duration->new(seconds => $izone);
+        print "camera UTC time: $itime_utc\n";
+        my $roffset = $gpsdt - $itime_utc;
+        my $roffset_s = $roffset->hours * 3600 + $roffset->minutes * 60 + $roffset->seconds;
+        $roffset_s = -$roffset_s if $roffset->is_negative;
+        print "reduced (UTC) offset: $roffset_s\n";
+    }
 }
 
 sub align_vmin {

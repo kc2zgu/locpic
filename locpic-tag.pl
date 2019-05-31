@@ -42,7 +42,7 @@ if (exists $opts{l})
     LocPic::Debug->set_level($opts{l});
 }
 
-my ($trackdb, $lasttrack, $track, $offsetdt);
+my ($trackdb, $lasttrack, $track, $offsetdt, $offsetdt_r);
 
 my %stats;
 sub add_stat {
@@ -69,10 +69,10 @@ sub align_image {
 
     add_stat('total');
 
-    my $itime;
+    my ($itime, $izone);
     eval
     {
-        $itime = $image->get_time();
+        ($itime, $izone) = $image->get_time();
     };
     if ($@)
     {
@@ -80,7 +80,15 @@ sub align_image {
         add_stat('error');
         return;
     }
-    my $gpstime = $itime + $offsetdt;
+    my $gpstime;
+    if (defined $izone)
+    {
+        $gpstime = $itime - DateTime::Duration->new(seconds => $izone) + $offsetdt_r;
+    }
+    else
+    {
+        $gpstime = $itime + $offsetdt;
+    }
     my $camera = $image->get_camera();
     local $| = 1;
 
@@ -162,6 +170,11 @@ sub align_image {
 if (exists $opts{o})
 {
     $offsetdt = DateTime::Duration->new(seconds => $opts{o});
+    print "clock offset: $opts{o}\n";
+    my $offset_r = $opts{o} % 1800;
+    $offset_r -= 1800 if $offset_r > 900;
+    print "reduced offset: $offset_r\n";
+    $offsetdt_r = DateTime::Duration->new(seconds => $offset_r);
 }
 else
 {

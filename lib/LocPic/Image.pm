@@ -62,7 +62,26 @@ sub get_time {
     my $dt = DateTime->new(year => $year, month => $month, day => $day,
                            hour => $hour, minute => $min, second => $sec);
 
-    return $dt;
+    # canon style time zone                           
+    my $timezone = $self->{exif}->GetValue('TimeZone', 'Raw');
+    if (defined $timezone)
+    {
+        return $dt, $timezone * 60;
+    }
+    # olympus style UTC time
+    my $exif_dtu = $self->{exif}->GetValue('DateTimeUTC', 'ValueConv');
+    if (defined $exif_dtu)
+    {
+        my ($year, $month, $day, $hour, $min, $sec) =
+          $exif_dtu =~ /(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/;
+        return (DateTime->new(year => $year, month => $month, day => $day,
+                           hour => $hour, minute => $min, second => $sec), 0);
+    }
+    # floating local time
+    else
+    {
+        return ($dt, undef);
+    }
 }
 
 sub get_camera {
