@@ -247,3 +247,62 @@ sub tag_dryrun {
         set_progress(0);
     }
 }
+
+sub index_log {
+    my $line = shift;
+
+    my $textview = $builder->get_object('text_indexlog');
+    my $buffer = $textview->get_buffer();
+    $buffer->insert($buffer->get_end_iter(), $line . "\n");
+    while (Glib::MainContext::iteration(undef, 0)) {}
+}
+
+sub index_track {
+    my $trackfile = shift;
+
+    eval
+    {
+        my $mtime = (stat($trackfile))[9];
+        if (my $itime = $trackdb->find_file($trackfile))
+        {
+            if ($itime > $mtime)
+            {
+                index_log("$trackfile already indexed");
+                next;
+            }
+        }
+
+        my $track = LocPic::Track->new($trackfile);
+        unless (defined $track)
+        {
+            index_log("No tracks in $trackfile");
+            next;
+        }
+
+        #print "track range: $track->{start_time} - $track->{end_time}\n";
+        my $point = $track->get_point(0);
+        #print "point: $point->{lat} $point->{lon}\n";
+
+        $trackdb->add_track($track);
+        index_log("$trackfile added to index");
+    };
+}
+
+sub index_file {
+    my $trackfile = $builder->get_object('file_trackfile')->get_filename();
+
+    index_track($trackfile);
+}
+
+sub index_dir {
+    my $trackdir = $builder->get_object('file_trackdir')->get_filename();
+
+    opendir my $dir, $trackdir;
+    while (my $file = readdir $dir)
+    {
+        next unless $file =~ /\.gpx$/i;
+        my $path = "$trackdir/$file";
+        index_track($path);
+    }
+    closedir $dir;    
+}
