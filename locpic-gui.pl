@@ -89,6 +89,7 @@ sub gps_time_changed {
 
     my $offset = $gpsdt - $itime;
     $offset_s = $offset->hours * 3600 + $offset->minutes * 60 + $offset->seconds;
+    $offset_s *= -1 if $offset->is_negative();
     $builder->get_object('label_time_offset')->set_label($offset_s);
 }
 
@@ -219,6 +220,7 @@ sub find_location {
         LocPic::Debug->_debug(1 => "nearest point: $time1 $lat1 $lon1");
         #return;
     }
+    $image->set_tag_hints(Track => basename($lasttrack), Offset => $offset_s, GPSTime => $gpstime);
     return LocPic::Point->new(lat => $lat1, lon => $lon1);
 }
 
@@ -243,6 +245,35 @@ sub tag_dryrun {
             set_progress($i/@images);
             Glib::MainContext::iteration(undef, 0);
             $images_store->iter_next($iter);
+        }
+        set_progress(0);
+    }
+}
+
+sub tag_write {
+    if (@images)
+    {
+        $offset_s = $builder->get_object('adjustment_offset')->get_value();
+        $offsetdt = DateTime::Duration->new(seconds => $offset_s);
+        print "clock offset: $offset_s\n";
+        my $offset_r = $offset_s % 1800;
+        $offset_r -= 1800 if $offset_r > 900;
+        print "reduced offset: $offset_r\n";
+        $offsetdt_r = DateTime::Duration->new(seconds => $offset_r);
+
+        my $iter = $images_store->get_iter_first();
+        for my $i(0..$#images)
+        {
+            print "Image: $images[$i]\n";
+            my $loc = find_location($images[$i]);
+            my $locstr = sprintf '%10.5f, %10.5f', $loc->{lat}, $loc->{lon};
+            print "Found location $locstr\n";
+            $images_store->set($iter, 2 => $i, 4 => $locstr);
+            set_progress($i/@images);
+            Glib::MainContext::iteration(undef, 0);
+            $images_store->iter_next($iter);
+            $images[$i]->set_location($loc);
+            $images[$i]->write_meta();
         }
         set_progress(0);
     }
