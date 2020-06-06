@@ -190,6 +190,7 @@ if (exists $opts{d})
 if (exists $opts{g})
 {
     $track = LocPic::Track->new($opts{g});
+    $lasttrack = $opts{g};
 }
 else
 {
