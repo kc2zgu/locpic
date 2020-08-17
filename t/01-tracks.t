@@ -3,15 +3,17 @@
 use strict;
 use warnings;
 
-use Test::More tests => 16;
+use Test::More tests => 20;
 
 use LocPic::Track;
 use Path::Tiny;
 
 my $assets = path($ENV{LOCPIC_ASSETS});
 
+# read track
 my $track = new_ok('LocPic::Track', $assets->child('2012-08-25 21.27.22 Day.gpx'));
 
+# check point count, start and end times
 is($track->points, 18);
 is($track->start_time, '2012-08-26T01:27:22');
 is($track->end_time, '2012-08-26T01:27:56');
@@ -33,3 +35,9 @@ $track = new_ok('LocPic::Track', $assets->child('2020-08-16_12-49_Sun.gpx'));
 is($track->points, 449);
 is($track->start_time, '2020-08-16T16:49:34');
 is($track->end_time, '2020-08-16T17:01:56');
+
+$track = new_ok('LocPic::Track', $assets->child('2020-08-09 113303.gpx'));
+
+is($track->points, 862);
+is($track->start_time, '2020-08-09T15:04:22');
+is($track->end_time, '2020-08-09T15:33:03');

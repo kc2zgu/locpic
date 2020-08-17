@@ -103,13 +103,16 @@ sub find_time {
             my $rt;
             if (defined $t1 && !defined $t2)
             {
+                return undef if $td1 > $self->{maxdiff};
                 $rt = $t1;
             }
             elsif (!defined $t1 && defined $t2)
             {
+                return undef if $td2 > $self->{maxdiff};
                 $rt = $t2;
             }
-            elsif ($td1 > $self->{maxdiff} && $td2 > $self->{maxdiff})
+            elsif (($td1 > $self->{maxdiff} || !defined $td1)
+                   && ($td2 > $self->{maxdiff} || !defined $td2))
             {
                 print "no track for $time (diff: $td1, $td2)\n";
                 return undef;
@@ -117,8 +120,8 @@ sub find_time {
             else
             {
                 $rt = ($td1 < $td2) ? $t1 : $t2;
+                print "closest track: $rt ($td1/$td2)\n";
             }
-            print "closest track: $rt ($td1/$td2)\n";
             return $rt;
         }
     }
