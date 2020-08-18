@@ -2,10 +2,10 @@ package LocPic::Database;
 
 use strict;
 use DBI;
-use File::Path qw/make_path/;
-use Path::Class;
+use Path::Tiny;
+use File::HomeDir;
 
-my $dbpath = "$ENV{HOME}/.config/locpic/data.db";
+my $dbpath = path(File::HomeDir->my_data)->child('locpic', 'data.db');
 my $dbhandle;
 
 sub set_dbpath
@@ -21,7 +21,7 @@ sub open_db
 {
     unless (defined $dbhandle)
     {
-        file($dbpath)->dir->mkpath;
+        $dbpath->parent->mkpath;
         print "opening new database $dbpath\n";
         $dbhandle = DBI->connect("dbi:SQLite:dbname=$dbpath", '', '');
     }

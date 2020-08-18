@@ -5,18 +5,13 @@ use strict;
 use Test::Harness;
 use Path::Tiny;
 use FindBin;
+use Config;
 
 # get the base directory
 my $rootdir = path($FindBin::Bin);
 # add lib directory so tests can find local modules
 my $locallib = $rootdir->child('lib');
-if (defined $ENV{PERL5LIB})
-{
-    $ENV{PERL5LIB} = "$locallib:$ENV{PERl5LIB}";
-} else
-{
-    $ENV{PERL5LIB} = $locallib;
-}
+$ENV{PERL5LIB} = join($Config{path_sep}, $locallib, $ENV{PERL5LIB});
 
 # find the test-assets directory so tests can load input files
 $ENV{LOCPIC_ASSETS} = $rootdir->child('test-assets');
