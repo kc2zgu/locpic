@@ -21,7 +21,7 @@ $ENV{LOCPIC_TMP} = $temp;
 
 # find all test scripts in t/
 my $tdir = $rootdir->child('t');
-my @tfiles = map {"$_"} $tdir->children(qr/\.t$/);
+my @tfiles = sort map {"$_"} $tdir->children(qr/\.t$/);
 
 print "Test assets directory: $ENV{LOCPIC_ASSETS}\n";
 print "Temporary directory: $ENV{LOCPIC_TMP}\n";
