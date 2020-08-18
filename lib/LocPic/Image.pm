@@ -6,6 +6,7 @@ use Image::ExifTool;
 use Image::ExifTool::Location;
 use DateTime;
 use File::Basename;
+use LocPic::Point;
 
 use base qw/LocPic::Debug/;
 
@@ -69,19 +70,19 @@ sub get_time {
         return $dt, $timezone * 60;
     }
     # olympus style UTC time
-    my $exif_dtu = $self->{exif}->GetValue('DateTimeUTC', 'ValueConv');
-    if (defined $exif_dtu)
-    {
-        my ($year, $month, $day, $hour, $min, $sec) =
-          $exif_dtu =~ /(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/;
-        return (DateTime->new(year => $year, month => $month, day => $day,
-                           hour => $hour, minute => $min, second => $sec), 0);
-    }
+    #my $exif_dtu = $self->{exif}->GetValue('DateTimeUTC', 'ValueConv');
+    #if (defined $exif_dtu)
+    #{
+    #    my ($year, $month, $day, $hour, $min, $sec) =
+    #      $exif_dtu =~ /(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/;
+    #    return (DateTime->new(year => $year, month => $month, day => $day,
+    #                       hour => $hour, minute => $min, second => $sec), 0);
+    #}
     # floating local time
-    else
-    {
+    #else
+    #{
         return ($dt, undef);
-    }
+    #}
 }
 
 sub get_camera {
