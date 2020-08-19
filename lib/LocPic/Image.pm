@@ -164,7 +164,7 @@ sub write_meta {
         my $bakfile = "$self->{file}.bak";
         $self->_debug(1 => "Writing metadata, original saved to $bakfile");
         rename $self->{file}, $bakfile;
-        if ($self->{exif}->WriteInfo($bakfile, $self->{file}) == 1)
+        if ($self->{exif}->WriteInfo($bakfile, "$self->{file}") == 1)
         {
             $self->{metadirty} = 0;
         }
@@ -175,7 +175,7 @@ sub write_meta {
     } else
     {
         $self->_debug(1 => "Writing metadata to $self->{file}");
-        if ($self->{exif}->WriteInfo($self->{file}) == 1)
+        if ($self->{exif}->WriteInfo("$self->{file}") == 1)
         {
             $self->{metadirty} = 0;
         }
