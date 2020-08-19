@@ -5,7 +5,7 @@ use strict;
 use Image::ExifTool;
 use Image::ExifTool::Location;
 use DateTime;
-use File::Basename;
+use Path::Tiny;
 use LocPic::Point;
 
 use base qw/LocPic::Debug/;
@@ -29,7 +29,8 @@ use base qw/LocPic::Debug/;
 sub new {
     my ($class, $file) = @_;
 
-    my $self = { file => $file, filebase => basename($file), exif => Image::ExifTool->new(), metadirty => 0 };
+    $file = path($file) unless ref $file eq 'Path::Tiny';
+    my $self = { file => $file, filebase => $file->basename, exif => Image::ExifTool->new(), metadirty => 0 };
     $self->{exif}->ExtractInfo($file, {Group0 => ['EXIF', 'XMP', 'File']});
     my $type = $self->{exif}->GetValue('MIMEType');
 
