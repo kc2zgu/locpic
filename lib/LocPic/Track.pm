@@ -5,7 +5,7 @@ use strict;
 use Geo::Gpx;
 use DateTime;
 use LocPic::Point;
-use File::Spec;
+use Path::Tiny;
 use Time::Series;
 
 use base qw/Class::Accessor::Fast LocPic::Debug/;
@@ -19,7 +19,7 @@ sub new {
     my $gpx = Geo::Gpx->new(input => $gpxfh, use_datetime => 1);
 
     my $self = { gpx => $gpx, points => [],
-                 file_name => File::Spec->rel2abs($gpxfile) };
+                 file_name => path($gpxfile) };
     bless $self, $class;
 
     return undef unless defined $gpx->tracks;
@@ -129,7 +129,29 @@ sub find_points {
     if ($self->{ts})
     {
         my @p = $self->{ts}->lookup($time);
-        return map {LocPic::Point->new(time => $_->[0], lat => $_->[1], lon => $_->[2], ele => $_->[3])} @p;
+        return map {LocPic::Point->new(time => $_->[0], lat => $_->[1], lon => $_->[2], ele => $_->[3])}
+          (@p > 1 ? @p[1,2] : $p[0]);
+    }
+}
+
+sub dt_seconds {
+    my $duration = shift;
+    return $duration->in_units('minutes') * 60 + $duration->in_units('seconds');
+}
+
+sub time_diff {
+    my ($self, $time) = @_;
+
+    my ($p1, $p2) = $self->find_points($time);
+    my $d1 = dt_seconds($time - $p1->time);
+    if (defined $p2)
+    {
+        my $d2 = dt_seconds($p2->time - $time);
+        return $d2 < $d1 ? $d2 : $d1;
+    }
+    else
+    {
+        return $d1;
     }
 }
 

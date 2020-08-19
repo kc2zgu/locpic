@@ -62,7 +62,7 @@ sub find_time {
             {
                 print "multiple tracks: " . join(', ', map {basename $_->[0]} @tracks) . "\n";
             }
-            return $tracks[0]->[0];
+            return map {$_->[0]} @tracks;
         }
         else
         {

@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use feature 'state';
 
 use FindBin;
 use lib "$FindBin::Bin/lib";
@@ -42,7 +43,9 @@ if (exists $opts{l})
     LocPic::Debug->set_level($opts{l});
 }
 
-my ($trackdb, $lasttrack, $track, $offsetdt, $offsetdt_r);
+my ($trackdb, $lasttrack, $track, $offsetdt, $offsetdt_r, $timediff);
+
+$timediff = 7200;
 
 my %stats;
 sub add_stat {
@@ -58,11 +61,36 @@ sub add_stat {
     #print "$stat_type count: $stats{$stat_type}\n";
 }
 
+sub get_track {
+    my $trackfile = "$_[0]";
+
+    state %tracks_cache;
+
+    if (exists $tracks_cache{$trackfile})
+    {
+        return $tracks_cache{$trackfile};
+    }
+    else
+    {
+        print "[load track $trackfile]...";
+        $tracks_cache{$trackfile} = LocPic::Track->new($trackfile);
+        my $pts = $tracks_cache{$trackfile}->points;
+        print " $pts points\n";
+        return $tracks_cache{$trackfile};
+    }
+}
+
+sub dt_seconds {
+    my $duration = shift;
+    return $duration->in_units('minutes') * 60 + $duration->in_units('seconds');
+}
+
 sub align_image {
-    my $image = LocPic::Image->new($_[0]);
+    my $imagepath = shift;
+    my $image = LocPic::Image->new($imagepath);
     unless (defined $image)
     {
-        print "not an image: $_[0]\n";
+        print "not an image: $imagepath\n";
         add_stat('noimage');
         return;
     }
@@ -76,7 +104,7 @@ sub align_image {
     };
     if ($@)
     {
-        print "[$_[0]: internal error]\n";
+        print "[$imagepath: internal error]\n";
         add_stat('error');
         return;
     }
@@ -102,25 +130,43 @@ sub align_image {
 
     #print "camera time: $itime\n";
     #print "GPS time: $gpstime\n";
+    my @tracks;
+    my $point;
 
+    # find candidate tracks
     if (defined $trackdb)
     {
-        my $trackfile = $trackdb->find_time($gpstime);
-        unless (defined $trackfile)
+        my @trackfiles = $trackdb->find_time($gpstime);
+        unless (scalar @trackfiles)
         {
-            printf "%-16s (%-24.24s): %s NO TRACK\n",
-              basename($_[0]), $camera, $itime;
+            printf "%-16s (%-24.24s): %s NO TRACK (db)\n",
+              basename($imagepath), $camera, $itime;
             add_stat('notrack');
             return;
         }
-        if ($trackfile ne $lasttrack)
-        {
-            print "[load track $trackfile]...";
-            $track = LocPic::Track->new($trackfile);
-            $lasttrack = $trackfile;
-            my $pts = $track->points;
-            print " $pts points\n";
-        }
+        @tracks = map {get_track($_)} @trackfiles;
+    }
+    else
+    {
+        @tracks = ($track);
+    }
+
+    # filter tracks
+    @tracks = grep {
+        $_->time_diff($gpstime) < $timediff;
+    } @tracks;
+
+    #print "filtered: @{[$_->file_name->basename]}\n" for @tracks;
+
+    # sort best track
+    $track = (sort { $a->time_diff($gpstime) <=> $b->time_diff($gpstime) } @tracks)[0];
+
+    unless (defined $track)
+    {
+        printf "%-16s (%-24.24s): %s NO TRACK (filtered)\n",
+          basename($imagepath), $camera, $itime;
+        add_stat('notrack');
+        return;
     }
 
     my ($p1, $p2) = $track->find_point($gpstime);
@@ -146,7 +192,7 @@ sub align_image {
 
     #print "final location: $lat1 $lon1\n";
     printf "%-16s (%-24.24s): %s -> %s: %10.5f,%10.5f",
-      basename($_[0]), $camera, $itime, $gpstime, $lat1, $lon1;
+      basename($imagepath), $camera, $itime, $gpstime, $lat1, $lon1;
     if (my $point = $image->get_location && !exists $opts{f})
     {
         #print "existing location: $point->{lat} $point->{lon}\n";
@@ -158,7 +204,7 @@ sub align_image {
         unless (exists $opts{n})
         {
             $image->set_location(LocPic::Point->new(lat => $lat1, lon => $lon1));
-            $image->set_tag_hints(Track => basename($lasttrack), Offset => $opts{o}, GPSTime => $gpstime);
+            $image->set_tag_hints(Track => $track->file_name->basename, Offset => $opts{o}, GPSTime => $gpstime);
             print " [W]";
             $image->write_meta($opts{b});
             add_stat('tag');
@@ -198,6 +244,7 @@ else
     if (exists $opts{t})
     {
         $trackdb->{maxdiff} = $opts{t};
+        $timediff = $opts{t};
     }
 }
 

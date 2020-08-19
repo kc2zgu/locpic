@@ -40,23 +40,23 @@ isnt($trackdb->find_file('2020-08-09 113303.gpx'), 0);
 # search by time, equal to first point
 my $findtime = '2020-08-09T15:04:22';
 
-my $foundtrack = $trackdb->find_time($findtime);
+my ($foundtrack) = $trackdb->find_time($findtime);
 is(path($foundtrack)->canonpath, $tracks[0]->canonpath);
 
 # search by time, between first and last
 $findtime = '2020-08-09T15:05:39';
 
-$foundtrack = $trackdb->find_time($findtime);
+($foundtrack) = $trackdb->find_time($findtime);
 is(path($foundtrack)->canonpath, $tracks[0]->canonpath);
 
 # search by time, after last, within maxfiff
 $findtime = '2020-08-09T15:35:00';
 
-$foundtrack = $trackdb->find_time($findtime);
+($foundtrack) = $trackdb->find_time($findtime);
 is(path($foundtrack)->canonpath, $tracks[0]->canonpath);
 
 # search by time, after last, beyond maxdiff
 $findtime = '2020-08-09T18:00:00';
 
-$foundtrack = $trackdb->find_time($findtime);
+($foundtrack) = $trackdb->find_time($findtime);
 is($foundtrack, undef);
