@@ -16,7 +16,12 @@ use Statistics::Descriptive;
 my %opts;
 getopts('z:m:t:o:c:', \%opts);
 
+sub HELP_MESSAGE {
+    print "Usage: $0 [-m method] -t time [-z timezone] image\n";
+}
+
 my ($input) = @ARGV;
+my $zone;
 
 sub align_direct {
     die "direct alignment requires a single image as input\n"
@@ -34,10 +39,14 @@ sub align_direct {
 
     my ($hour, $min, $sec) =
       $opts{t} =~ /(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)/;
-    my $gpsdt = DateTime->new(year => $itime->year, month => $itime->month, day => $itime->day, hour => $hour, minute => $min, second => $sec);
+    my $gpsdt = DateTime->new(year => $itime->year, month => $itime->month, day => $itime->day,
+                              hour => $hour, minute => $min, second => $sec);
 
+    # set local timezone for GPS time
+    $gpsdt->set_time_zone($zone);
     print "GPS local time: $gpsdt\n";
-    $gpsdt -= DateTime::Duration->new(hours => $opts{z});
+    # convert to UTC
+    $gpsdt->set_time_zone('UTC');
     print "GPS UTC time: $gpsdt\n";
 
     my $offset = $gpsdt - $itime;
@@ -163,6 +172,35 @@ sub align_vmin {
             print "*\n";
         }
     }
+}
+
+# parse timezone
+if (defined $opts{z})
+{
+    if ($opts{z} =~ /^-?\d+(?:\.\d+)?$/)
+    {
+        print "timezone: $opts{z} hours\n";
+    }
+    elsif ($opts{z} =~ /^([\+\-])?(\d\d?):(\d\d)(?::(\d\d))?$/)
+    {
+        print "timezone: $opts{z} h/m/s\n";
+        $zone = DateTime::TimeZone->new(name => $opts{z});
+    }
+    elsif (DateTime::TimeZone->is_valid_name($opts{z}))
+    {
+        print "named timezone: $opts{z}\n";
+        $zone = DateTime::TimeZone->new(name => $opts{z});
+    }
+}
+else
+{
+    print "timezone: defaulting to local\n";
+    $zone = DateTime::TimeZone->new(name => 'local');
+}
+
+unless (defined $zone)
+{
+    die "No local timezone specified or detected\n";
 }
 
 if ($opts{m} eq 'direct')
